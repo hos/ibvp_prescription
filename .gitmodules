@@ -1,0 +1,6 @@
+[submodule "ibvp_prescription/shortsym"]
+	path = ibvp_prescription/shortsym
+	url = https://github.com/hos/shortsym
+[submodule "ibvp_prescription/lazyeqn"]
+	path = ibvp_prescription/lazyeqn
+	url = https://github.com/hos/lazyeqn
