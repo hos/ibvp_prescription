@@ -21,11 +21,14 @@ shortsym_path = pkg_resources.resource_filename('ibvp_prescription','shortsym/sh
 lazyeqn_content = open(lazyeqn_path).read().replace('\ProvidesPackage{lazyeqn}\n', '')
 shortsym_content = open(shortsym_path).read().replace('\ProvidesPackage{shortsym}\n', '')
 
-header = r'''\documentclass{article}
-\setlength\parindent{0pt}''' \
-    +lazyeqn_content \
-    +shortsym_content \
-    +r'\begin{document}'
+header = r'''\documentclass[10pt,DIV15]{scrartcl}
+\setlength\parindent{0pt}
+\date{}
+\usepackage{mdframed}''' \
+    + lazyeqn_content \
+    + shortsym_content \
+    + r'\newcommand\varn[3]{{D_#2 #1\dtp #3}}' \
+    + r'\begin{document}'
 
 footer = r'''\end{document}'''
 
@@ -53,28 +56,35 @@ def __main__():
     result += '\n'
     result += '\maketitle\n'
 
+    if 'initial_conditions' in doc:
+        ics = doc['initial_conditions']
+    else:
+        ics = None
+
     # IBVP
     result += section('IBVP')
-
     result += ibvp(
         doc['differential_equations'],
         doc['boundary_conditions'],
-        doc['initial_conditions'],
+        ics=ics,
     )
 
     # Weak Form
-    result += section('Weak Form')
-    result += weak_forms(doc['weak_forms'])
-    result += '\n'
-    result += forms(doc['forms'])
+    if 'weak_forms' in doc and 'forms' in doc:
+        result += section('Weak Form')
+        result += weak_forms(doc['weak_forms'], doc['forms'])
+        result += '\n'
 
-    # Discretization
-    result += section('Discretization')
-    result += discretization(doc['forms'])
+    # if 'forms' in doc:
+        result += forms(doc['forms'])
+        # Discretization
+        result += section('Discretization')
+        result += discretization(doc['forms'])
 
-    # Discretization
-    result += section('System Equations')
-    result += system(doc['system'])
+    # System
+    if 'system' in doc:
+        result += section('System Equations')
+        result += system(doc['system'])
 
     # Footer
     result += footer

@@ -1,4 +1,5 @@
-def ibvp(des, bcs, ics):
+
+def ibvp(des, bcs, ics=None):
     result = ''
     result = 'Our initial-boundary value problem reads'
     result += '\n'
@@ -20,29 +21,58 @@ def ibvp(des, bcs, ics):
         line += bc['domain']
         align_list.append(line)
 
+    if ics:
+        for ic in ics:
+            line = ''
+            line += ic['equation'].replace('=','&=')
+            line += r'\quad && \text{for} \quad && x\in '
+            line += ic['domain']
+            if 'time_domain' in ic:
+                line += ', t \in %s'%ic['time_domain']
+
+            align_list.append(line)
+
+
     result += '\\\\\n'.join(align_list)
 
     result += r'\end{alignat*}'
     return result
 
-def weak_forms(weak_forms):
+def weak_forms(weak_forms, forms):
     result = ''
+    result += r'\begin{mdframed}'
     result += 'Find '
     function_list = []
+
     for function in weak_forms['functions']:
         function_list.append('$%s \in %s$'%(function['var'],function['space']))
+
     result += ', '.join(function_list)
     result += ' such that'
     result += '\n'
 
     result += r'\begin{gather*}'
     result += '\n'
+
+    symbol_dict = {}
+    for form in forms:
+        symbol_dict[form['symbol']] = '(%s)'%(', '.join(form['args']))
+
+    equation_list = []
+
+    for i in weak_forms['equations']:
+        tokens = i['equation'].split(' ')
+        for n, token in enumerate(tokens):
+            if token in symbol_dict:
+                tokens[n] = token+symbol_dict[token]
+        equation_list.append(' '.join(tokens))
+
     # for equation in weak_form['equations']:
     #     result += equation['equation']
     #     result += '\\\\'
     #     result += '\n'
 
-    result += '\\\\\n'.join([i['equation'] for i in weak_forms['equations']])
+    result += '\\\\\n'.join(equation_list)
 
     result += r'\end{gather*}'
     result += '\n'
@@ -54,6 +84,7 @@ def weak_forms(weak_forms):
     result += ', '.join(function_list)
     result += '.'
     result += '\n'
+    result += r'\end{mdframed}'
 
     return result
 
@@ -67,7 +98,12 @@ def forms(forms):
 
     align_list = []
     for form in forms:
-        align_list.append('%s &= %s'%(form['symbol'], form['definition']))
+        line = ''
+        line += form['symbol']
+        line += '(%s)'%(', '.join(form['args']))
+        line += ' &= '
+        line += form['definition']
+        align_list.append(line)
 
     result += '\\\\\n'.join(align_list)
     result += r'\end{align*}'
@@ -85,11 +121,20 @@ def discretization(forms):
 
     align_list = []
     for form in forms:
-        align_list.append('%s &= %s &&= %s'%(
-            form['discrete_symbol'],
-            form['discrete_subs'],
-            form['discrete_definition'],
-        ))
+        if not ('discrete_symbol' in form and 'discrete_args' in form and 'discrete_definition' in form):
+            continue
+
+        line = ''
+        line += form['discrete_symbol']
+        line += ' &= '
+        line += form['symbol']
+        line += '(%s)'%(', '.join(form['discrete_args']))
+        line += ' &&= '
+        line += form['discrete_definition']
+        align_list.append(line)
+
+    if not align_list:
+        return ''
 
     result += '\\\\\n'.join(align_list)
     result += r'\end{alignat*}'
