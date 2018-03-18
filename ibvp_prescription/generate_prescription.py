@@ -1,15 +1,13 @@
 import yaml
 import argparse
 import pkg_resources
-import shutil
-import tempfile
 import os
-from os.path import join
 import logging
 # logging.basicConfig(level=logging.DEBUG)
 
 from ibvp_prescription.template import template_content
 from ibvp_prescription.tex_mappings import ibvp, weak_forms, forms, discretization, system, section
+from ibvp_prescription.compile_pdf import compile_pdf
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-i', '--input', type=str, help='Input YAML file')
@@ -45,54 +43,42 @@ def __main__():
     f = open(args.input)
     doc = yaml.load(f.read())
 
-    temp_dir_path = tempfile.mkdtemp()
-    tex_file_path = join(temp_dir_path,'main.tex')
-    pdf_file_path = join(temp_dir_path,'main.pdf')
+    result = ''
+    result += header
+    result += '\n'
 
-    out = open(tex_file_path, 'w')
-
-    out.write(header)
-    out.write('\n')
-
-    out.write(r'\title{%s}'%doc['title'])
-    out.write('\n')
-    out.write(r'\author{%s}'%doc['author'])
-    out.write('\n')
-    out.write('\maketitle\n')
+    result += r'\title{%s}'%doc['title']
+    result += '\n'
+    result += r'\author{%s}'%doc['author']
+    result += '\n'
+    result += '\maketitle\n'
 
     # IBVP
-    out.write(section('IBVP'))
+    result += section('IBVP')
 
-    out.write(ibvp(
+    result += ibvp(
         doc['differential_equations'],
         doc['boundary_conditions'],
         doc['initial_conditions'],
-    ))
+    )
 
     # Weak Form
-    out.write(section('Weak Form'))
-
-    out.write(weak_forms(doc['weak_forms']))
-
-    out.write('\n')
-
-    out.write(forms(doc['forms']))
+    result += section('Weak Form')
+    result += weak_forms(doc['weak_forms'])
+    result += '\n'
+    result += forms(doc['forms'])
 
     # Discretization
-    out.write(section('Discretization'))
-
-    out.write(discretization(doc['forms']))
+    result += section('Discretization')
+    result += discretization(doc['forms'])
 
     # Discretization
-    out.write(section('System Equations'))
+    result += section('System Equations')
+    result += system(doc['system'])
 
-    out.write(system(doc['system']))
+    # Footer
+    result += footer
 
-    out.write(footer)
-    out.close()
-
-    # Compile pdf
-    os.system('pdflatex -output-directory=%s %s'%(temp_dir_path, tex_file_path))
 
     if args.output:
         output_path = args.output
@@ -104,8 +90,7 @@ def __main__():
 
         output_path += '.pdf'
 
-    shutil.copyfile(pdf_file_path, output_path)
-    # os.rename(pdf_file_path, args.output)
+    compile_pdf(result, output_path)
 
     # print(doc)
 
